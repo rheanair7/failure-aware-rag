@@ -1,0 +1,7 @@
+venv/
+corpus/
+.env
+__pycache__/
+*.pyc
+.chromadb/
+results/*.csv
