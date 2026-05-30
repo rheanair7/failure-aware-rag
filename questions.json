@@ -1,0 +1,242 @@
+[
+  {
+    "id": "q01",
+    "question": "What is CLRNet's F1 score on the crossroad scenario of the CULane benchmark, and why does it fail completely?",
+    "ground_truth": "CLRNet achieves F1 = 0.000 on the crossroad scenario. The failure is structural: CLRNet's row-anchor priors assume lanes cross each horizontal row at predictable positions, which is fundamentally incompatible with intersection geometry where lanes terminate, merge, or are absent entirely.",
+    "source_papers": ["clrnet", "culane"],
+    "category": "failure_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q02",
+    "question": "What are the two distinct classes of failure identified in CLRNet's scenario-based analysis, and how do they differ in recoverability?",
+    "ground_truth": "Perceptual failures occur when attention is misdirected toward visually salient but irrelevant regions such as headlights, shadow boundaries, or glare, and are partially recoverable through augmentation-aware fine-tuning. Structural failures occur when the model cannot capture lane geometry regardless of input quality, as in crossroad and curve scenarios, and remain unresolved by any data-centric intervention.",
+    "source_papers": ["clrnet"],
+    "category": "failure_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q03",
+    "question": "Why did test-time augmentation consistently degrade CLRNet performance across all evaluated scenarios?",
+    "ground_truth": "Test-time augmentation introduces a distribution shift between training and inference conditions. The model was not trained on augmented inputs, so transformations such as CLAHE, gamma correction, and bilateral filtering alter the input distribution in ways the model's learned features are not robust to. The largest degradation was in the arrow scenario at -0.110 F1.",
+    "source_papers": ["clrnet"],
+    "category": "intervention_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q04",
+    "question": "How does CLRNet formulate lane detection as a prediction problem, and what is the shape of its output tensor?",
+    "ground_truth": "CLRNet formulates lane detection as a set prediction problem over 192 row-anchor prior proposals. Each prior is refined across multiple feature pyramid levels through a cross-layer refinement mechanism, producing a final output tensor of shape [batch, 192, 78]. The first 72 channels encode lane point x-coordinates, channels 72-74 encode classification logits for lane presence, and the remaining channels encode geometric parameters.",
+    "source_papers": ["clrnet"],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q05",
+    "question": "Which Grad-CAM target layer is used for CLRNet failure analysis and why?",
+    "ground_truth": "Grad-CAM is applied to the final residual block of the ResNet-18 backbone, specifically the last layer of layer4. This layer is selected because it captures high-level semantic features relevant for lane detection prior to aggregation in the feature pyramid network.",
+    "source_papers": ["clrnet"],
+    "category": "methodology",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q06",
+    "question": "What custom target function is used for Grad-CAM in CLRNet, and why is a standard implementation insufficient?",
+    "ground_truth": "A custom target function extracts classification logits from output channels 72-74 across all 192 prior anchors, applies softmax to obtain per-anchor lane confidence scores, and selects the maximum confidence score as the scalar target. Standard implementations rely on a single scalar output, which is not directly applicable to CLRNet's structured output tensor.",
+    "source_papers": ["clrnet"],
+    "category": "methodology",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q07",
+    "question": "What attention pattern does CLRNet exhibit in the night scenario failure cases according to Grad-CAM?",
+    "ground_truth": "In night scenario failure cases, attention is focused on bright regions such as headlights and reflective surfaces, while lane markings receive minimal activation. This misdirection of attention toward visually salient but irrelevant bright regions results in missed lane detections.",
+    "source_papers": ["clrnet"],
+    "category": "failure_analysis",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q08",
+    "question": "What attention pattern does CLRNet exhibit in curve scenario failure cases, and how does this differ from night failures?",
+    "ground_truth": "In curve scenario failures, attention is broadly distributed and does not align with lane geometry, indicating a structural limitation in capturing curved lane shapes. This differs from night failures, which are perceptual: in curves, the failure persists even after augmentation because the model's row-anchor priors cannot accommodate tight curve geometry regardless of input quality.",
+    "source_papers": ["clrnet"],
+    "category": "failure_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q09",
+    "question": "How does LaneATT's anchor mechanism differ from CLRNet's row-anchor approach?",
+    "ground_truth": "LaneATT uses image-wide anchor proposals sampled from the image boundaries and performs attention pooling along anchor lines. CLRNet uses row-anchors that predict lane coordinates at each horizontal row of the image through a cross-layer refinement mechanism across feature pyramid levels.",
+    "source_papers": ["laneatt", "clrnet"],
+    "category": "cross_paper_comparison",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q10",
+    "question": "What is the CULane evaluation metric and how is a predicted lane counted as a true positive?",
+    "ground_truth": "Lane predictions are represented as polylines and matched to ground truth annotations using pixel-level IoU computed on 30-pixel-wide lane masks. A predicted lane is counted as a true positive if its IoU with a ground truth lane exceeds a threshold of 0.5. Precision, recall, and F1 are computed from true positive, false positive, and false negative counts per scenario.",
+    "source_papers": ["culane"],
+    "category": "dataset_evaluation",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q11",
+    "question": "What are the nine scenario categories in the CULane benchmark test set?",
+    "ground_truth": "The nine scenario categories are: normal, crowd, highlight, shadow, no-line, arrow, curve, crossroad, and night. The test set contains 34,680 frames stratified across these categories.",
+    "source_papers": ["culane"],
+    "category": "dataset_evaluation",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q12",
+    "question": "Which two scenarios showed the largest F1 gains from augmentation-aware fine-tuning, and by how much?",
+    "ground_truth": "Crowd and no-line scenarios showed the largest gains, each improving by +0.012 F1 relative to baseline. Crowd improved from 0.786 to 0.798, and no-line improved from 0.522 to 0.534.",
+    "source_papers": ["clrnet"],
+    "category": "intervention_analysis",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q13",
+    "question": "Why does shadow remain the only perceptual scenario where fine-tuning does not fully recover baseline performance?",
+    "ground_truth": "Shadow fine-tuning results in F1 = 0.781 compared to baseline 0.792, a deficit of -0.011. The paper suggests this may be because the proxy heuristic for identifying shadow training images, which uses bimodal brightness distribution and local contrast variance, may have introduced noise into the training subset, or that shadow conditions require more targeted augmentation strategies.",
+    "source_papers": ["clrnet"],
+    "category": "intervention_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q14",
+    "question": "What proxy heuristic is used to identify night images in the CULane training split for scenario-specific fine-tuning?",
+    "ground_truth": "Frames with a mean grayscale intensity below 50 are flagged as night images, yielding approximately 9,757 training samples.",
+    "source_papers": ["clrnet"],
+    "category": "methodology",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q15",
+    "question": "What specific augmentation is applied to the night scenario, and what effect does it have on Grad-CAM attention?",
+    "ground_truth": "Gamma correction with gamma=1.8 is applied to increase brightness, followed by CLAHE and bilateral filtering to improve local contrast and reduce noise. Post-augmentation Grad-CAM heatmaps show a clear shift in attention toward the road surface, and lane detections recover.",
+    "source_papers": ["clrnet"],
+    "category": "methodology",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q16",
+    "question": "What is CLRNet's baseline F1 on the normal scenario, and what does Grad-CAM show in successful normal predictions?",
+    "ground_truth": "CLRNet achieves F1 = 0.933 on the normal scenario. In successful predictions, Grad-CAM shows attention concentrated along lane structures and road boundaries, indicating the model correctly identifies relevant spatial features under favorable conditions.",
+    "source_papers": ["clrnet"],
+    "category": "failure_analysis",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q17",
+    "question": "Why is fine-tuning necessary for augmentation to be beneficial, and what does this imply about test-time augmentation as a strategy?",
+    "ground_truth": "Fine-tuning is necessary because the model must learn to interpret transformed inputs during training rather than encountering them only at inference time. Test-time augmentation alone fails because it introduces a distribution mismatch with training data. This implies that augmentation strategies must be incorporated into training to be effective, and that inference-time input transformation is insufficient for improving robustness.",
+    "source_papers": ["clrnet"],
+    "category": "intervention_analysis",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q18",
+    "question": "What does UFLD stand for and what is its core architectural approach to lane detection?",
+    "ground_truth": "UFLD stands for Ultra Fast Structure-aware Deep Lane Detection. It reformulates lane detection as a row-based selecting problem using global features, enabling extremely fast inference by treating lane detection as a classification task over row anchors rather than pixel-level segmentation.",
+    "source_papers": ["ufld"],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q19",
+    "question": "What is BEVFormer's key innovation and what type of attention mechanism does it use?",
+    "ground_truth": "BEVFormer generates bird's-eye-view features from multi-camera images using spatial cross-attention and temporal self-attention. Its key innovation is learning BEV representations directly from perspective-view camera inputs without requiring explicit depth estimation, using deformable attention to aggregate features from camera views onto a unified BEV grid.",
+    "source_papers": ["bevformer"],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q20",
+    "question": "How does DETR differ from traditional object detection pipelines, and what role does the transformer decoder play?",
+    "ground_truth": "DETR eliminates hand-designed components like anchor generation and non-maximum suppression by framing object detection as a direct set prediction problem. The transformer decoder takes a fixed set of learned object queries and attends to encoder output features to directly predict a set of bounding boxes and class labels, using bipartite matching for loss computation.",
+    "source_papers": ["detr"],
+    "category": "architecture",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q21",
+    "question": "What is CondLaneNet's key contribution to lane detection, and how does it handle lane instance differentiation?",
+    "ground_truth": "CondLaneNet introduces conditional lane detection based on instance-level conditional convolutions. It detects lane instances by predicting dynamic kernels conditioned on instance features, allowing the model to differentiate between multiple lane instances without relying on fixed anchor assignments.",
+    "source_papers": ["condlanenet"],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q22",
+    "question": "What backbone does CLRNet use in its pretrained evaluation configuration on CULane?",
+    "ground_truth": "CLRNet uses a ResNet-18 backbone in the pretrained evaluation configuration used for the CULane experiments.",
+    "source_papers": ["clrnet"],
+    "category": "architecture",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q23",
+    "question": "What is the arrow scenario baseline F1 for CLRNet, and how does TTA affect it compared to other scenarios?",
+    "ground_truth": "The arrow scenario has a baseline F1 of 0.899, the highest among challenging scenarios. TTA causes the largest degradation of any scenario at -0.110, dropping F1 to 0.789. Fine-tuning recovers it to 0.900, marginally above baseline.",
+    "source_papers": ["clrnet"],
+    "category": "intervention_analysis",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q24",
+    "question": "How does CLRNet's cross-layer refinement mechanism work?",
+    "ground_truth": "CLRNet refines each of the 192 row-anchor prior proposals across multiple feature pyramid levels. Each prior is progressively refined at different scales, with features from multiple pyramid levels contributing to the final lane prediction. This cross-layer approach allows the model to capture both fine-grained local lane details and broader contextual information.",
+    "source_papers": ["clrnet"],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q25",
+    "question": "What does the no-line scenario represent in CULane, and what is CLRNet's baseline performance there?",
+    "ground_truth": "The no-line scenario represents driving conditions where lane markings are absent, sparse, or invisible. CLRNet achieves a baseline F1 of 0.522, the second lowest after crossroad, reflecting the difficulty of detecting lanes when the primary visual cue is missing or degraded.",
+    "source_papers": ["clrnet", "culane"],
+    "category": "dataset_evaluation",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q26",
+    "question": "What augmentation parameters are used for CLAHE in the CLRNet failure analysis experiments?",
+    "ground_truth": "CLAHE is applied with clipLimit=2.0 and tileGridSize=(8,8). Bilateral filtering uses parameters d=5, sigmaColor=35, and sigmaSpace=35. Sharpening is performed using a standard high-pass kernel.",
+    "source_papers": ["clrnet"],
+    "category": "methodology",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q27",
+    "question": "How does LaneGCN approach lane graph learning and what type of data does it operate on?",
+    "ground_truth": "LaneGCN builds a lane graph from HD map data and uses graph convolutional networks to propagate information along lane connectivity. It operates on vectorized map representations rather than raw images, capturing long-range lane topology and connectivity for motion forecasting and path planning applications.",
+    "source_papers": ["lanegcn"],
+    "category": "architecture",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q28",
+    "question": "What broader implication does the crossroad F1 = 0.000 result have for deployment of lane detection models?",
+    "ground_truth": "Crossroads are common real-world driving scenarios, not edge cases. A model that fails completely at F1 = 0.000 across all three experimental conditions including fine-tuning poses direct safety risks because it produces silent failures without uncertainty signals. The result implies that row-anchor based architectures like CLRNet require fundamental architectural modification, not data-centric fixes, before they can be trusted in intersection scenarios.",
+    "source_papers": ["clrnet"],
+    "category": "safety_implications",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q29",
+    "question": "Why does aggregate F1 mask safety-critical failures in lane detection models?",
+    "ground_truth": "Aggregate F1 averages performance across all scenario categories, so strong performance in high-frequency normal conditions can dominate the metric while catastrophic failures in specific scenarios like crossroad F1 = 0.000 are statistically diluted. A model with overall F1 = 0.796 can still fail completely in scenarios that occur regularly in real-world driving, making aggregate metrics an insufficient safety evaluation criterion.",
+    "source_papers": ["clrnet", "culane"],
+    "category": "safety_implications",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q30",
+    "question": "What is the mF1 metric used in the CLRNet evaluation and how does it differ from standard F1?",
+    "ground_truth": "mF1 is the mean F1 across IoU thresholds from 0.5 to 0.95 in increments of 0.05, following the COCO-style evaluation protocol. It characterizes model robustness across varying matching strictness levels, unlike standard F1 which uses a single IoU threshold of 0.5. A model that barely meets the 0.5 threshold will show a large gap between F1 and mF1.",
+    "source_papers": ["clrnet", "culane"],
+    "category": "dataset_evaluation",
+    "difficulty": "medium"
+  }
+]
